@@ -1,4 +1,4 @@
-# ---- This is <geocoding_helpers.py> ----
+# ---- This is <geocoding_utils.py> ----
 
 """
 Module with small general helpers for geocoding 
@@ -19,11 +19,44 @@ from osgeo import gdal, osr, gdal_array
 # -------------------------------------------------------------------------- #
 # -------------------------------------------------------------------------- #
 
+def stack_geocoded_images(
+    input_tif_path1,
+    input_tif_path2,
+    output_tif_path
+):
+    """Stack geocoded input images to combined multi-layer tiff file
+       
+    Parameters
+    ----------
+    input_tif_path1 : path to first input tiff file
+    input_tif_path2 : path to second input tiff file
+    output_tif_path: path to stacked output tiff file
+    loglevel : loglevel setting (default='INFO')
+    """ 
+
+    gdal_cmd = f'gdal_merge.py ' + \
+        f'-o {output_tif_path} ' + \
+        f'-separate ' + \
+        f'{input_tif_path1} ' + \
+        f'{input_tif_path2} '
+
+    logger.info(f'Running gdal_merge.py to stack input bands to combined tiff file')
+    logger.info(f'Executing: {gdal_cmd}')
+
+    os.system(gdal_cmd)
+    
+    return
+
+# -------------------------------------------------------------------------- #
+# -------------------------------------------------------------------------- #
+
 def warp_image_to_target_projection(
     input_img_path,
     output_tif_path,
     target_epsg,
     pixel_spacing,
+    srcnodata = 0,
+    dstnodata = 0,
     resampling = 'near',
     order = 3,
     loglevel='INFO'
@@ -32,23 +65,37 @@ def warp_image_to_target_projection(
        
     Parameters
     ----------
-    input_img_path : path to input image file containing with embedded gcps
+    input_img_path : path to input image file with embedded gcps
     output_tif_path: path to output geo-coded image file (tif format)
     target_epsg : output epsg code
     pixel_spacing : output pixel spacing in units of the target projection
+    srcnodata : source no data value (default=0), set to None to avoid
+    dstnodata : output no data value (default=0), set to None to avoid
     resampling : resampling method to use for gdalwarp (default='near')
     order: order of polynomial used for gdalwarp (default=3)
     loglevel : loglevel setting (default='INFO')
     """ 
 
     # gdalwarp command to project the input image and save output tif to output_tif_path
-    gdal_cmd = f'gdalwarp ' + \
-        f'-overwrite -srcnodata 0 -dstnodata 0 ' + \
-        f'-t_srs epsg:{target_epsg} ' + \
-        f'-tr {pixel_spacing} {pixel_spacing} ' + \
-        f'-r {resampling} ' + \
-        f'-order {order} ' + \
-        f'{input_img_path} {output_tif_path}'
+    if srcnodata == None and dstnodata == None:
+        logger.debug('Nodata values set to None')
+        gdal_cmd = f'gdalwarp ' + \
+            f'-overwrite ' + \
+            f'-t_srs epsg:{target_epsg} ' + \
+            f'-tr {pixel_spacing} {pixel_spacing} ' + \
+            f'-r {resampling} ' + \
+            f'-order {order} ' + \
+            f'{input_img_path} {output_tif_path}'
+
+    else:
+        logger.debug(f'Nodata values set to {srcnodata} and {dstnodata}')
+        gdal_cmd = f'gdalwarp ' + \
+            f'-overwrite -srcnodata {srcnodata} -dstnodata {dstnodata} ' + \
+            f'-t_srs epsg:{target_epsg} ' + \
+            f'-tr {pixel_spacing} {pixel_spacing} ' + \
+            f'-r {resampling} ' + \
+            f'-order {order} ' + \
+            f'{input_img_path} {output_tif_path}'
 
     logger.info(f'Running gdalwarp to warp image to desired projection ({target_epsg})')
     logger.info(f'Executing: {gdal_cmd}')
@@ -78,6 +125,60 @@ def create_srs_and_WKT(source_epsg = 4326):
     tie_point_WKT = srs.ExportToWkt()
     
     return srs, tie_point_WKT
+
+# -------------------------------------------------------------------------- #
+# -------------------------------------------------------------------------- #
+
+def get_tie_points_from_S1_product(
+    safe_folder,
+    loglevel='INFO'
+):
+
+    """Get tie-point grid from original S1 product
+
+    Parameters
+    ----------
+    safe_folder : path to S1 image SAFE folder
+    loglevel : loglevel setting (default='INFO')
+
+    Returns
+    -------
+    gcps : list of tie points
+    tie_point_WKT : tie-point well-known text projection
+    """
+
+    # remove default logger handler and add personal one
+    logger.remove()
+    logger.add(sys.stderr, level=loglevel)
+
+    logger.info('Getting tie points (GCPs) from S1 manifest.safe')
+
+# -------------------------------------------------------------------------- #
+
+    # convert folder strings to paths
+    safe_folder = pathlib.Path(safe_folder).expanduser().absolute()
+
+    logger.debug(f'safe_folder: {safe_folder}')
+
+    if not safe_folder.is_dir():
+        logger.error(f'Cannot find Sentinel-1 SAFE folder: {safe_folder}')
+        raise NotADirectoryError(f'Cannot find Sentinel-1 SAFE folder: {safe_folder}')
+
+# -------------------------------------------------------------------------- #
+
+    # build path to manifest.safe file
+    safe_path = safe_folder / 'manifest.safe'
+
+    # open manifest.sate
+    geo = gdal.Open(safe_path.as_posix())
+
+    # get gcps from safe file
+    gcps = geo.GetGCPs()
+
+    # make WKT at this time too
+    srs, tie_point_WKT = create_srs_and_WKT()
+
+    return (gcps, tie_point_WKT)
 
 # -------------------------------------------------------------------------- #
 # -------------------------------------------------------------------------- #
@@ -146,7 +247,7 @@ def get_tie_points_from_lat_lon(
             gcps.append(tpgcp)
 
 
-    # make WKT at this time too.
+    # make WKT at this time too
     srs, tie_point_WKT = create_srs_and_WKT()
 
     return (gcps, tie_point_WKT)
@@ -166,7 +267,7 @@ def embed_tie_points_in_array_to_tiff(
 
     Parameters
     ----------
-    input_array : array containing the image data to be geo-refenced
+    input_array : array containing the image data to be geo-refenced (bands, lines, samples))
     gcp_list: list with gcps
     output_tif_path : path to output geotif file with embedded gcps
     tie_point_WKT : srs.ExportToWkt(), srs: spatial reference system object
@@ -217,7 +318,7 @@ def embed_tie_points_in_array_to_tiff(
         band_out.WriteArray(input_array)
         band_out.FlushCache()
     elif bands > 1:
-        for b in np.arange(1,bands+1):
+        for b in range(1,bands+1):
             band_out = out.GetRasterBand(b)
             band_out.WriteArray(input_array[b-1,:,:])
             band_out.FlushCache()
@@ -229,13 +330,10 @@ def embed_tie_points_in_array_to_tiff(
     
     return
 
-
-
-
 # -------------------------------------------------------------------------- #
 # -------------------------------------------------------------------------- #
 # -------------------------------------------------------------------------- #
 # -------------------------------------------------------------------------- #
 # -------------------------------------------------------------------------- #
 
-# ---- End of <geocoding_helpers.py> ----
+# ---- End of <geocoding_utils.py> ----
