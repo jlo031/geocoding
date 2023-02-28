@@ -1,3 +1,9 @@
+*.tiff
+*.tiff.aux.xml
+*.tif
+*.tif.aux.xml
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
