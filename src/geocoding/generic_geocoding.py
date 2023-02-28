@@ -123,6 +123,8 @@ def geocode_image_from_lat_lon(
         logger.debug(f'Removing existing tiff_path_with_gcps')
         tiff_path_with_gcps.unlink()
 
+    # create output dir (if needed)
+    output_tiff_path.parent.mkdir(parents=True, exist_ok=True)
 
     # get GCPs from lat lon bands
     gcp_list, tie_point_WKT = geo_utils.get_tie_points_from_lat_lon(
