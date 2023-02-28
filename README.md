@@ -10,7 +10,7 @@ Library to perform geocoding for different satellite sensors
     conda activate geocoding
     
     # install required packages
-    conda install -y ipython scipy loguru lxml python-dotenv
+    conda install -y ipython scipy loguru lxml python-dotenv pillow
 
 
 
