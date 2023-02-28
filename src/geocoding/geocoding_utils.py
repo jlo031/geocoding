@@ -112,7 +112,7 @@ def create_srs_and_WKT(source_epsg = 4326):
       
     Parameters
     ----------
-    source_epsg : epsg code for srs (default = 4326, which is WGS84 geographic lat/lon)
+    source_epsg : epsg code for srs (default=4326, which is WGS84 geographic lat/lon)
       
     Returns
     -------
