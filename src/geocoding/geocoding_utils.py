@@ -22,7 +22,9 @@ from osgeo import gdal, osr, gdal_array
 def stack_geocoded_images(
     input_tif_path1,
     input_tif_path2,
-    output_tif_path
+    output_tif_path,
+    overwrite = False,
+    loglevel = 'INFO'
 ):
     """Stack geocoded input images to combined multi-layer tiff file
        
@@ -31,11 +33,20 @@ def stack_geocoded_images(
     input_tif_path1 : path to first input tiff file
     input_tif_path2 : path to second input tiff file
     output_tif_path: path to stacked output tiff file
+    overwrite : overwrite existing files (default=False)
     loglevel : loglevel setting (default='INFO')
     """ 
 
+    output_tif_path = pathlib.Path(output_tif_path)
+    if output_tif_path.is_file() and not overwrite:
+        logger.info('Stacked output file already exists')
+        return
+    elif output_tif_path.is_file() and overwrite:
+        logger.info('Removing existing output file')
+        output_tif_path.unlink()
+
     gdal_cmd = f'gdal_merge.py ' + \
-        f'-o {output_tif_path} ' + \
+        f'-o {output_tif_path.as_posix()} ' + \
         f'-separate ' + \
         f'{input_tif_path1} ' + \
         f'{input_tif_path2} '
