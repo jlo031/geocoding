@@ -19,7 +19,6 @@ setup(
         'ipython',
         'loguru',
         'lxml',
-        'python-dotenv',
         'pillow'
     ],
     packages = find_packages(where='src'),
