@@ -15,7 +15,7 @@ It is recommended to run the code in a virtual environment.
     conda activate geocoding
     
     # install required packages
-    conda install -y scipy loguru lxml python-dotenv pillow
+    conda install -y scipy loguru pillow
     pip install ipython
 
 
