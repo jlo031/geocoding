@@ -31,7 +31,7 @@ For both installation options, first set up the environment as described above.
 2. **Local installation**
 
        # clone the repository
-      git clone git@github.com:jlo031/geocoding.git
+       git clone git@github.com:jlo031/geocoding.git
 
    Change into the main directory of the cloned repository (it should contain the *setup.py* file) and install the library:
 
