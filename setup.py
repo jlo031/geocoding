@@ -18,7 +18,6 @@ setup(
         'scipy',
         'ipython',
         'loguru',
-        'lxml',
         'pillow'
     ],
     packages = find_packages(where='src'),
