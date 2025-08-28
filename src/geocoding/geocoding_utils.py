@@ -40,23 +40,45 @@ def stack_geocoded_images(
     output_tif_path = pathlib.Path(output_tif_path)
     if output_tif_path.is_file() and not overwrite:
         logger.info('Stacked output file already exists')
-        return
+        return True
     elif output_tif_path.is_file() and overwrite:
         logger.info('Removing existing output file')
         output_tif_path.unlink()
 
+    # open the input files
+    ds1 = gdal.Open(input_tif_path1)
+    ds2 = gdal.Open(input_tif_path2)
+
+    # get metadata from the first file
+    driver = gdal.GetDriverByName("GTiff")
+    out_ds = driver.Create(output_tif_path, ds1.RasterXSize, ds1.RasterYSize, 2, ds1.GetRasterBand(1).DataType)
+
+    # copy georeferencing information
+    out_ds.SetGeoTransform(ds1.GetGeoTransform())
+    out_ds.SetProjection(ds1.GetProjection())
+
+    # write each band
+    out_ds.GetRasterBand(1).WriteArray(ds1.GetRasterBand(1).ReadAsArray())
+    out_ds.GetRasterBand(2).WriteArray(ds2.GetRasterBand(1).ReadAsArray())
+
+    # close datasets
+    ds1    = None
+    ds2    = None
+    out_ds = None
+
+    """
+    # Deprecated. Can be removed if the code above works.
     gdal_cmd = f'gdal_merge.py ' + \
         f'-o {output_tif_path.as_posix()} ' + \
         f'-separate ' + \
         f'{input_tif_path1} ' + \
         f'{input_tif_path2} '
-
     logger.info(f'Running gdal_merge.py to stack input bands to combined tiff file')
     logger.info(f'Executing: {gdal_cmd}')
-
     os.system(gdal_cmd)
+    """
     
-    return
+    return True
 
 # -------------------------------------------------------------------------- #
 # -------------------------------------------------------------------------- #
