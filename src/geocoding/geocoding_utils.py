@@ -278,7 +278,7 @@ def get_tie_points_from_lat_lon(
                     tie_points_x[xi].astype(float)+1.0,
                     tie_points_y[yi].astype(float)+1.0
                 )
-            gcps.append(tpgcp)
+                gcps.append(tpgcp)
 
 
     # make WKT at this time too
