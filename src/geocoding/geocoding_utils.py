@@ -270,7 +270,7 @@ def get_tie_points_from_lat_lon(
     gcps = []
     for xi in range(tie_points):
         for yi in range(tie_points):
-            if not np.isnan(xi) and not np.isnan(yi):
+            if np.isfinite(xi) and np.isfinite(yi):
                 tpgcp = gdal.GCP(
                     tie_points_lon[yi, xi].astype(float),
                     tie_points_lat[yi, xi].astype(float),
